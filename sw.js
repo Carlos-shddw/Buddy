@@ -1,10 +1,11 @@
-const CACHE_NAME = "buddy-shell-v15";
+const CACHE_NAME = "buddy-shell-v17";
 const APP_SHELL = [
   "./",
   "./index.html",
   "./manifest.json",
   "./assets/css/styles.css",
   "./assets/js/app.js",
+  "./assets/js/modules/ui.js",
   "./assets/images/logo.svg",
   "./assets/images/icons/icon-192x192.png",
   "./assets/images/icons/icon-512x512.png",
@@ -18,9 +19,10 @@ const APP_SHELL = [
 
 self.addEventListener("install", (event) => {
   event.waitUntil(
-    caches.open(CACHE_NAME).then((cache) => cache.addAll(APP_SHELL))
+    caches.open(CACHE_NAME)
+      .then((cache) => cache.addAll(APP_SHELL))
+      .then(() => self.skipWaiting())
   );
-  self.skipWaiting();
 });
 
 self.addEventListener("activate", (event) => {
@@ -47,35 +49,38 @@ self.addEventListener("fetch", (event) => {
 
   if (request.mode === "navigate") {
     event.respondWith(
-      fetch(request)
-        .then((response) => {
+      (async () => {
+        try {
+          const response = await fetch(request);
           if (response.ok) {
-            const responseCopy = response.clone();
-            caches.open(CACHE_NAME).then((cache) => cache.put(request, responseCopy));
+            event.waitUntil(
+              caches.open(CACHE_NAME).then((cache) => cache.put(request, response.clone()))
+            );
           }
           return response;
-        })
-        .catch(async () => {
+        } catch {
           const cachedPage = await caches.match(request);
           return cachedPage || caches.match("./pages/offline.html");
-        })
+        }
+      })()
     );
     return;
   }
 
   event.respondWith(
-    caches.match(request).then((cachedResponse) => {
+    (async () => {
+      const cachedResponse = await caches.match(request);
       if (cachedResponse) {
         return cachedResponse;
       }
 
-      return fetch(request).then((response) => {
-        if (response.ok) {
-          const responseCopy = response.clone();
-          caches.open(CACHE_NAME).then((cache) => cache.put(request, responseCopy));
-        }
-        return response;
-      });
-    })
+      const response = await fetch(request);
+      if (response.ok) {
+        event.waitUntil(
+          caches.open(CACHE_NAME).then((cache) => cache.put(request, response.clone()))
+        );
+      }
+      return response;
+    })()
   );
 });
