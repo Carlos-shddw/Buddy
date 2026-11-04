@@ -32,6 +32,7 @@ button:focus-visible, a:focus-visible, input:focus-visible, textarea:focus-visib
 .nav-caption { margin: 54px 0 14px 12px; color: #9b9d96; font-size: .66rem; font-weight: 700; letter-spacing: .15em; }
 .main-nav { display: grid; gap: 6px; }
 .main-nav a { display: flex; align-items: center; gap: 13px; min-height: 46px; padding: 0 13px; border-radius: 13px; color: #646c66; font-size: .88rem; font-weight: 600; transition: background .18s, color .18s; }
+.main-nav a[hidden], .mobile-nav a[hidden] { display: none; }
 .main-nav a:hover, .main-nav a.active { background: var(--green-soft); color: var(--green-dark); }
 .nav-icon { display: grid; place-items: center; width: 22px; font-size: 1.25rem; line-height: 1; }
 .sidebar-bottom { margin-top: auto; }
@@ -104,6 +105,15 @@ h3 { font-size: 1.05rem; }
 .patient-link-card .form-help { margin-bottom: 12px; }
 .patient-link-actions { display: flex; gap: 10px; }
 .patient-link-actions .text-input { min-width: 0; flex: 1; }
+.patient-note-form { display: grid; gap: 14px; }
+.patient-note-form .local-note { margin: -5px 0 0; }
+.patient-note-form > .button { justify-self: start; }
+.patient-notes-section { margin-top: 30px; }
+.patient-notes-list { display: grid; gap: 12px; }
+.patient-note-card { padding: 18px; }
+.patient-note-card > .section-row { margin: 0 0 12px; }
+.patient-note-card time { color: var(--muted); font-size: .73rem; white-space: nowrap; }
+.patient-note-card > p { margin-bottom: 14px; color: var(--muted); font-size: .86rem; line-height: 1.65; white-space: pre-wrap; overflow-wrap: anywhere; }
 .empty-state { padding: 30px; border: 1px dashed #d8ddd4; border-radius: 18px; color: var(--muted); text-align: center; }
 .empty-state p { margin: 0 0 15px; font-size: .88rem; line-height: 1.6; }
 
@@ -217,10 +227,6 @@ h3 { font-size: 1.05rem; }
 .access-form { display: grid; gap: 14px; }
 .access-form .local-note { margin: -5px 0 0; }
 .access-form > .button { justify-self: start; }
-.saved-profile { display: flex; align-items: center; gap: 11px; padding-bottom: 15px; border-bottom: 1px solid var(--line); }
-.saved-profile strong, .saved-profile small { display: block; }
-.saved-profile strong { font-size: .88rem; }
-.saved-profile small { margin-top: 3px; color: var(--muted); font-size: .74rem; }
 
 @media (max-width: 1000px) {
   .sidebar { width: 220px; }
@@ -238,6 +244,7 @@ h3 { font-size: 1.05rem; }
   .content { width: min(100% - 36px, 600px); min-height: calc(100vh - 138px); padding: 32px 0 35px; }
   .app-footer { width: min(100% - 36px, 600px); padding-bottom: 90px; font-size: .68rem; }
   .mobile-nav { position: fixed; inset: auto 0 0; z-index: 10; display: grid; grid-template-columns: repeat(4, 1fr); padding: 8px 7px calc(8px + env(safe-area-inset-bottom)); border-top: 1px solid var(--line); background: rgba(255,254,250,.96); backdrop-filter: blur(14px); }
+  .psychologist-view .mobile-nav { grid-template-columns: repeat(3, minmax(0, 1fr)); }
   .mobile-nav a { display: flex; min-height: 52px; flex-direction: column; align-items: center; justify-content: center; gap: 3px; border-radius: 12px; color: #777e78; font-size: .64rem; font-weight: 600; }
   .mobile-nav a span { font-size: 1.22rem; line-height: 1; }
   .mobile-nav a.active { background: var(--green-soft); color: var(--green-dark); }

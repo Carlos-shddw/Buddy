@@ -1,5 +1,6 @@
 const ENTRIES_KEY = "buddy.entries.v1";
 const PROFILE_KEY = "buddy.profile.v1";
+const NOTES_KEY = "buddy.psychologist.notes.v1";
 const moods = [
   { id: "em baixo", label: "Em baixo", face: "🌧️" },
   { id: "ansioso", label: "Ansioso/a", face: "😟" },
@@ -16,6 +17,7 @@ const exercises = [
 const app = document.querySelector("#app-content");
 const toast = document.querySelector("#toast");
 let entries = [];
+let patientNotes = [];
 let profile = { name: "" };
 let selectedRole = "patient";
 let toastTimeout;
@@ -34,6 +36,17 @@ function escapeHTML(value) {
   return String(value).replace(/[&<>"']/g, (character) => ({
     "&": "&amp;", "<": "&lt;", ">": "&gt;", "\"": "&quot;", "'": "&#39;"
   })[character]);
+}
+
+function getProfileNameFromEmail(email, fallback = "Utilizador") {
+  const value = String(email || "").trim();
+  if (!value) return fallback;
+  const localPart = value.split("@", 1)[0].trim();
+  const derivedName = localPart
+    .replace(/[._-]+/g, " ")
+    .replace(/\s+/g, " ")
+    .trim();
+  return derivedName || fallback;
 }
 
 function readStoredValue(key, fallback, validate) {
@@ -187,16 +200,21 @@ function renderCreateAccount() {
       <h1>Criar conta</h1>
       <p class="intro">Nesta versão, vais criar um perfil local neste dispositivo — não é necessária uma conta online.</p>
       <form id="create-profile-form" class="form-card card access-form">
-        <label class="field-label" for="new-profile-name">Como te podemos chamar?</label>
-        <input class="text-input" id="new-profile-name" name="name" maxlength="50" autocomplete="given-name" placeholder="O teu nome" required>
-        <p class="local-note">Não introduzas informação sensível. Este perfil não tem palavra-passe nem sincronização.</p>
+        <label class="field-label" for="new-profile-name">Nome</label>
+        <input class="text-input" id="new-profile-name" name="name" maxlength="50" autocomplete="name" placeholder="O teu nome" required>
+        <label class="field-label" for="new-profile-phone">Número de telemóvel</label>
+        <input class="text-input" id="new-profile-phone" name="phone" type="tel" autocomplete="tel" placeholder="O teu número de telemóvel" required>
+        <label class="field-label" for="new-profile-email">Email</label>
+        <input class="text-input" id="new-profile-email" name="email" type="email" autocomplete="email" placeholder="O teu email">
+        <label class="field-label" for="new-profile-password">Palavra-passe</label>
+        <input class="text-input" id="new-profile-password" name="password" type="password" autocomplete="new-password" placeholder="A tua palavra-passe">
+        <p class="local-note">O nome e o email ficam guardados no perfil deste dispositivo. O número de telemóvel e a palavra-passe não são guardados.</p>
         <button class="button" type="submit">Criar perfil e entrar <span aria-hidden="true">→</span></button>
       </form>
     </section>`;
 }
 
 function renderSignIn() {
-  const name = profile.name.trim();
   app.innerHTML = `
     <section class="access-page">
       <a class="text-button back-link" href="#access" data-route="access">← Voltar às opções</a>
@@ -204,10 +222,11 @@ function renderSignIn() {
       <h1>Iniciar sessão</h1>
       <p class="intro">Continua com o perfil guardado localmente neste navegador.</p>
       <form id="sign-in-form" class="form-card card access-form">
-        ${name ? `<div class="saved-profile"><span class="profile-avatar">${escapeHTML(name.charAt(0).toLocaleUpperCase("pt-PT"))}</span><span><strong>${escapeHTML(name)}</strong><small>Perfil neste dispositivo</small></span></div>` : ""}
-        <label class="field-label" for="sign-in-name">${name ? "Podes alterar o nome do perfil (opcional)" : "Como queres que te chamemos?"}</label>
-        <input class="text-input" id="sign-in-name" name="name" maxlength="50" autocomplete="given-name" value="${escapeHTML(name)}" placeholder="O teu nome" ${name ? "" : "required"}>
-        <p class="local-note">Não existe palavra-passe nem conta online nesta demonstração.</p>
+        <label class="field-label" for="sign-in-email">Email</label>
+        <input class="text-input" id="sign-in-email" name="email" type="email" autocomplete="email" value="${escapeHTML(profile.email || "")}" placeholder="O teu email">
+        <label class="field-label" for="sign-in-password">Palavra-passe</label>
+        <input class="text-input" id="sign-in-password" name="password" type="password" autocomplete="current-password" placeholder="A tua palavra-passe">
+        <p class="local-note">O email fica guardado localmente no perfil. A palavra-passe não é guardada nem verificada.</p>
         <button class="button" type="submit">Entrar neste dispositivo <span aria-hidden="true">→</span></button>
       </form>
     </section>`;
@@ -304,6 +323,33 @@ function renderPsychologistHome() {
       ${feedbackMarkup}
     </section>
     <p class="privacy-box"><strong>Privacidade e sincronização:</strong> o feedback é lido do armazenamento local deste navegador e só aparece aqui se o check-in tiver sido registado neste mesmo dispositivo com o ID associado. Não existe sincronização ou partilha online nesta demonstração.</p>`;
+}
+
+function renderPatientNotes() {
+  const psychologistId = profile.psychologistId;
+  const psychologistNotes = patientNotes
+    .filter((note) => note.psychologistId === psychologistId)
+    .sort((a, b) => b.createdAt.localeCompare(a.createdAt));
+  app.innerHTML = `
+    <div class="page-heading"><div><p class="eyebrow">Área profissional</p><h1>Notas</h1><p>Regista notas privadas associadas ao ID de cada paciente.</p></div></div>
+    <form id="patient-note-form" class="form-card card patient-note-form">
+      <label class="field-label" for="note-patient-id">ID do paciente</label>
+      <input class="text-input" id="note-patient-id" name="patientId" maxlength="12" pattern="PAC-[A-Fa-f0-9]{8}" title="Usa o formato PAC- seguido de 8 caracteres hexadecimais." value="${escapeHTML(profile.linkedPatientId || "")}" placeholder="PAC-XXXXXXXX" required>
+      <label class="field-label" for="patient-note">Nota</label>
+      <textarea class="text-area" id="patient-note" name="note" maxlength="2000" placeholder="Escreve uma nota sobre o paciente..." required></textarea>
+      <p class="local-note">As notas ficam guardadas apenas neste dispositivo e não são partilhadas com o paciente.</p>
+      <button class="button" type="submit">Guardar nota</button>
+    </form>
+    <section class="patient-notes-section">
+      <div class="section-row"><div><h2>Notas guardadas</h2><p>${psychologistNotes.length} ${psychologistNotes.length === 1 ? "nota" : "notas"}</p></div></div>
+      ${psychologistNotes.length ? `<div class="patient-notes-list">${psychologistNotes.map((note) => `
+        <article class="patient-note-card card">
+          <div class="section-row"><strong>Paciente ${escapeHTML(note.patientId)}</strong><time datetime="${escapeHTML(note.createdAt)}">${formatDate(note.createdAt, { day: "numeric", month: "short", year: "numeric", hour: "2-digit", minute: "2-digit" })}</time></div>
+          <p>${escapeHTML(note.text)}</p>
+          <button class="text-button danger-button button-small" type="button" data-action="delete-note" data-note-id="${escapeHTML(note.id)}">Apagar nota</button>
+        </article>`).join("")}</div>` : `<div class="empty-state"><p>Ainda não há notas guardadas. Adiciona uma nota usando o ID do paciente.</p></div>`}
+    </section>
+    <p class="privacy-box"><strong>Privacidade:</strong> as notas são guardadas localmente neste navegador. Não existe sincronização nem cópia de segurança online.</p>`;
 }
 
 function renderExerciseCards(list) {
@@ -423,10 +469,12 @@ function renderProfile() {
   const profileDetails = isPatient
     ? `<div class="patient-details">
         <div><span>Nome do paciente</span><strong>${escapeHTML(profile.name.trim() || "Ainda não indicado")}</strong></div>
+        <div><span>Email</span><strong>${escapeHTML(profile.email || "Ainda não indicado")}</strong></div>
         <div><span>ID de paciente</span><strong class="patient-id">${escapeHTML(profile.patientId || "Será criado ao guardar o perfil")}</strong></div>
       </div>`
     : `<div class="patient-details">
         <div><span>Nome do psicólogo</span><strong>${escapeHTML(profile.name.trim() || "Ainda não indicado")}</strong></div>
+        <div><span>Email</span><strong>${escapeHTML(profile.email || "Ainda não indicado")}</strong></div>
         <div><span>ID Psicólogo</span><strong class="patient-id">${escapeHTML(profile.psychologistId || "Será criado ao guardar o perfil")}</strong></div>
         <div><span>ID paciente</span><strong class="patient-id">${escapeHTML(profile.linkedPatientId || "Ainda não associado")}</strong></div>
       </div>`;
@@ -438,11 +486,13 @@ function renderProfile() {
       <form id="profile-form">
         <label class="field-label" for="profile-name">${isPatient ? "Nome do paciente" : "Nome do psicólogo"} <span style="font-weight:400;color:var(--muted)">(opcional)</span></label>
         <input class="text-input" id="profile-name" name="name" maxlength="50" autocomplete="given-name" value="${escapeHTML(profile.name)}" placeholder="O teu nome">
+        <label class="field-label" for="profile-email">Email <span style="font-weight:400;color:var(--muted)">(opcional)</span></label>
+        <input class="text-input" id="profile-email" name="email" type="email" maxlength="254" autocomplete="email" value="${escapeHTML(profile.email || "")}" placeholder="O teu email">
         ${isPatient ? "" : `<label class="field-label" for="linked-patient-id">ID paciente <span style="font-weight:400;color:var(--muted)">(opcional)</span></label>
         <input class="text-input" id="linked-patient-id" name="linkedPatientId" maxlength="12" pattern="PAC-[A-Fa-f0-9]{8}" title="Usa o formato PAC- seguido de 8 caracteres hexadecimais." value="${escapeHTML(profile.linkedPatientId || "")}" placeholder="PAC-XXXXXXXX">`}
         <div class="section-row"><span></span><button class="button" type="submit">Guardar preferências</button></div>
       </form>
-      <div class="privacy-box"><strong>A tua privacidade:</strong> o teu nome e os teus dados são guardados localmente neste navegador. Os IDs são identificadores locais da demonstração, não contas online.</div>
+      <div class="privacy-box"><strong>A tua privacidade:</strong> o teu nome, email e os teus dados são guardados localmente neste navegador. Os IDs são identificadores locais da demonstração, não contas online.</div>
       ${entries.length ? '<div class="section-row"><span></span><button class="text-button danger-button button-small" type="button" data-action="clear">Apagar todos os registos</button></div>' : ""}
     </section>`;
 }
@@ -450,15 +500,23 @@ function renderProfile() {
 function currentRoute() {
   const value = window.location.hash.slice(1) || "welcome";
   if (value === "home") return "dashboard";
-  return ["welcome", "role", "access", "signup", "signin", "dashboard", "checkin", "history", "exercises", "profile", "exercise/breathing", "exercise/grounding", "exercise/writing"].includes(value) ? value : "welcome";
+  return ["welcome", "role", "access", "signup", "signin", "dashboard", "checkin", "history", "notes", "exercises", "profile", "exercise/breathing", "exercise/grounding", "exercise/writing"].includes(value) ? value : "welcome";
 }
 
 function render() {
   const route = currentRoute();
   const isPublicRoute = ["welcome", "role", "access", "signup", "signin"].includes(route);
+  if (route === "notes" && profile.role !== "psychologist") {
+    window.location.hash = "dashboard";
+    return;
+  }
   document.body.classList.toggle("public-view", isPublicRoute);
+  document.body.classList.toggle("psychologist-view", profile.role === "psychologist");
   document.querySelectorAll("[data-route]").forEach((link) => {
     const target = link.dataset.route;
+    link.hidden = profile.role === "psychologist"
+      ? target === "checkin" || target === "exercises"
+      : target === "notes";
     const active = target === route || (target === "exercises" && route.startsWith("exercise/"));
     link.classList.toggle("active", active);
     if (active) link.setAttribute("aria-current", "page");
@@ -473,6 +531,7 @@ function render() {
     case "dashboard": renderHome(); break;
     case "checkin": renderCheckin(); break;
     case "history": renderHistory(); break;
+    case "notes": renderPatientNotes(); break;
     case "exercises": renderExercises(); break;
     case "profile": renderProfile(); break;
     case "exercise/breathing": renderBreathing(); break;
@@ -512,6 +571,7 @@ function saveProfile(form) {
   const nextProfile = {
     ...profile,
     name: String(data.get("name") || "").trim(),
+    email: String(data.get("email") || "").trim(),
     role: profile.role || "patient"
   };
   if (nextProfile.role === "patient" && !nextProfile.patientId) {
@@ -548,13 +608,25 @@ function linkPatient(form) {
 }
 
 function createLocalProfile(form) {
-  const name = String(new FormData(form).get("name") || "").trim();
+  const data = new FormData(form);
+  const name = String(data.get("name") || "").trim();
+  const phone = String(data.get("phone") || "").trim();
+  const submittedEmail = String(data.get("email") || "").trim();
   if (!name) {
-    showToast("Escreve um nome para criares o teu perfil.", true);
+    showToast("Escreve o teu nome para criares o perfil.", true);
+    return;
+  }
+  if (!phone) {
+    showToast("Escreve o teu número de telemóvel para criares o perfil.", true);
+    return;
+  }
+  if (!submittedEmail) {
+    showToast("Escreve um email para criares o teu perfil.", true);
     return;
   }
   const nextProfile = {
     name,
+    email: submittedEmail,
     role: selectedRole,
     ...(selectedRole === "patient" ? { patientId: createPatientId() } : { psychologistId: createPsychologistId(), linkedPatientId: "" })
   };
@@ -565,10 +637,13 @@ function createLocalProfile(form) {
 }
 
 function signInLocally(form) {
-  const submittedName = String(new FormData(form).get("name") || "").trim();
+  const data = new FormData(form);
+  const submittedEmail = String(data.get("email") || "").trim();
+  const fallbackName = (profile.name || "").trim() || getProfileNameFromEmail(submittedEmail || profile.email || "");
   const nextProfile = {
     ...profile,
-    name: submittedName || profile.name,
+    name: fallbackName,
+    email: submittedEmail || profile.email || "",
     role: selectedRole
   };
   if (selectedRole === "patient" && !nextProfile.patientId) nextProfile.patientId = createPatientId();
@@ -584,6 +659,41 @@ function signInLocally(form) {
   profile = nextProfile;
   showToast("A Buddy está pronta neste dispositivo.");
   window.location.hash = "dashboard";
+}
+
+function savePatientNote(form) {
+  const data = new FormData(form);
+  const patientId = String(data.get("patientId") || "").trim().toUpperCase();
+  const text = String(data.get("note") || "").trim();
+  if (!/^PAC-[A-F0-9]{8}$/.test(patientId)) {
+    showToast("O ID do paciente deve ter o formato PAC-XXXXXXXX.", true);
+    return;
+  }
+  if (!text) {
+    showToast("Escreve uma nota antes de guardar.", true);
+    return;
+  }
+  const nextNotes = [...patientNotes, {
+    id: crypto.randomUUID(),
+    psychologistId: profile.psychologistId,
+    patientId,
+    text,
+    createdAt: new Date().toISOString()
+  }];
+  persistValue(NOTES_KEY, nextNotes);
+  patientNotes = nextNotes;
+  showToast("Nota guardada neste dispositivo.");
+  renderPatientNotes();
+}
+
+function deletePatientNote(noteId) {
+  const note = patientNotes.find((item) => item.id === noteId && item.psychologistId === profile.psychologistId);
+  if (!note || !window.confirm("Queres apagar esta nota permanentemente?")) return;
+  const nextNotes = patientNotes.filter((item) => item.id !== noteId);
+  persistValue(NOTES_KEY, nextNotes);
+  patientNotes = nextNotes;
+  showToast("Nota apagada.");
+  renderPatientNotes();
 }
 
 function exportEntries() {
@@ -688,6 +798,7 @@ function handleClick(event) {
   const action = event.target.closest("[data-action]")?.dataset.action;
   if (action === "export") exportEntries();
   if (action === "clear") clearEntries();
+  if (action === "delete-note") deletePatientNote(event.target.closest("[data-note-id]")?.dataset.noteId);
   if (action === "breath-start") startBreathing();
   if (action === "breath-pause") {
     stopBreathing();
@@ -710,6 +821,7 @@ function initialize() {
       if (event.target.id === "checkin-form") saveEntry(event.target);
       if (event.target.id === "profile-form") saveProfile(event.target);
       if (event.target.id === "patient-link-form") linkPatient(event.target);
+      if (event.target.id === "patient-note-form") savePatientNote(event.target);
       if (event.target.id === "create-profile-form") createLocalProfile(event.target);
       if (event.target.id === "sign-in-form") signInLocally(event.target);
     } catch (error) {
@@ -729,8 +841,15 @@ function initialize() {
       && Number.isInteger(item.intensity) && item.intensity >= 1 && item.intensity <= 10
       && typeof item.note === "string" && !Number.isNaN(Date.parse(item.createdAt))
       && (item.patientId === undefined || (typeof item.patientId === "string" && /^PAC-[A-F0-9]{8}$/.test(item.patientId)))));
+    patientNotes = readStoredValue(NOTES_KEY, [], (value) => Array.isArray(value) && value.every((item) =>
+      item && typeof item.id === "string"
+      && typeof item.psychologistId === "string" && /^PSI-[A-F0-9]{8}$/.test(item.psychologistId)
+      && typeof item.patientId === "string" && /^PAC-[A-F0-9]{8}$/.test(item.patientId)
+      && typeof item.text === "string" && item.text.length > 0 && item.text.length <= 2000
+      && !Number.isNaN(Date.parse(item.createdAt))));
     profile = readStoredValue(PROFILE_KEY, { name: "", role: "patient" }, (value) =>
       value && typeof value.name === "string" && value.name.length <= 50
+      && (value.email === undefined || (typeof value.email === "string" && value.email.length <= 254))
       && (value.role === undefined || value.role === "patient" || value.role === "psychologist")
       && (value.patientId === undefined || (typeof value.patientId === "string" && /^PAC-[A-F0-9]{8}$/.test(value.patientId)))
       && (value.psychologistId === undefined || (typeof value.psychologistId === "string" && /^PSI-[A-F0-9]{8}$/.test(value.psychologistId)))
