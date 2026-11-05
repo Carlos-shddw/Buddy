@@ -1,10 +1,10 @@
 {
-  "id": "./index.html",
+  "id": "./",
   "name": "Buddy — um momento para ti",
   "short_name": "Buddy",
   "description": "Um espaço simples e privado para cuidar de ti, ao teu ritmo.",
   "lang": "pt-PT",
-  "start_url": "./index.html",
+  "start_url": "./",
   "scope": "./",
   "display": "standalone",
   "display_override": ["standalone", "minimal-ui"],
