@@ -1,4 +1,4 @@
-const CACHE_NAME = "buddy-shell-v17";
+const CACHE_NAME = "buddy-shell-v18";
 const APP_SHELL = [
   "./",
   "./index.html",
@@ -20,7 +20,7 @@ const APP_SHELL = [
 self.addEventListener("install", (event) => {
   event.waitUntil(
     caches.open(CACHE_NAME)
-      .then((cache) => cache.addAll(APP_SHELL))
+      .then((cache) => cache.addAll(APP_SHELL.map((url) => new Request(url, { cache: "reload" }))))
       .then(() => self.skipWaiting())
   );
 });
@@ -59,8 +59,10 @@ self.addEventListener("fetch", (event) => {
           }
           return response;
         } catch {
-          const cachedPage = await caches.match(request);
-          return cachedPage || caches.match("./pages/offline.html");
+          const cachedPage = await caches.match(request, { ignoreSearch: true });
+          const appShell = await caches.match("./index.html");
+          const offlinePage = await caches.match("./pages/offline.html");
+          return cachedPage || appShell || offlinePage;
         }
       })()
     );
