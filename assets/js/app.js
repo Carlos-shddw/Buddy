@@ -1,3 +1,5 @@
+import { setupInstallPrompt } from "./modules/ui.js";
+
 const ENTRIES_KEY = "buddy.entries.v1";
 const PROFILE_KEY = "buddy.profile.v1";
 const NOTES_KEY = "buddy.psychologist.notes.v1";
@@ -122,7 +124,11 @@ function renderWelcome() {
         <p class="public-lead">A Buddy ajuda-te a fazer pequenas pausas, perceber como te sentes e acompanhar os teus próprios registos, com calma e sem julgamentos.</p>
         <div class="public-actions">
           <a class="button public-cta" href="#role" data-route="role">Entrar <span aria-hidden="true">→</span></a>
-          <a class="button button-secondary public-about-button" href="#sobre">Sobre Buddy <span aria-hidden="true">↓</span></a>
+          <div class="public-about-actions">
+            <a class="button button-secondary public-about-button" href="#sobre">Sobre Buddy <span aria-hidden="true">↓</span></a>
+            <button class="button button-secondary install-button" type="button" aria-describedby="install-help">Instalar aplicação</button>
+            <p class="install-help" id="install-help" hidden aria-live="polite"></p>
+          </div>
         </div>
         <p class="local-note">Sem conta online. Os teus dados ficam neste dispositivo.</p>
       </div>
@@ -867,6 +873,7 @@ function initialize() {
     showToast(error.message, true);
   }
   render();
+  setupInstallPrompt();
   if ("serviceWorker" in navigator && window.isSecureContext) {
     window.addEventListener("load", () => {
       navigator.serviceWorker.register("./sw.js").catch((error) => {

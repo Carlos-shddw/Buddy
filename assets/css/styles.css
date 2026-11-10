@@ -186,6 +186,8 @@ h3 { font-size: 1.05rem; }
 .public-actions { display: flex; flex-wrap: wrap; align-items: center; gap: 11px; }
 .public-cta { min-width: 145px; min-height: 50px; }
 .public-about-button { min-height: 50px; padding: 0 17px; }
+.public-about-actions { display: grid; justify-items: stretch; gap: 9px; }
+.install-help { max-width: 320px; margin: 0; color: var(--muted); font-size: .75rem; line-height: 1.5; }
 .local-note { margin: 13px 0 0; color: var(--muted); font-size: .74rem; line-height: 1.55; }
 .public-art { position: relative; display: grid; min-height: 360px; place-items: center; overflow: hidden; border-radius: 45% 45% 42% 42%; background: #e9eee5; }
 .art-sun { position: absolute; top: 48px; right: 67px; width: 95px; height: 95px; border-radius: 50%; background: #f0dfb6; }
