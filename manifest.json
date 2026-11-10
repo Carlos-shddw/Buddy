@@ -1,14 +1,16 @@
 {
-  "id": "./",
+  "id": "./index.html",
   "name": "Buddy — um momento para ti",
   "short_name": "Buddy",
   "description": "Um espaço simples e privado para cuidar de ti, ao teu ritmo.",
   "lang": "pt-PT",
-  "start_url": "./",
+  "start_url": "./index.html",
   "scope": "./",
   "display": "standalone",
   "display_override": ["standalone", "minimal-ui"],
-  "orientation": "portrait",
+  "launch_handler": {
+    "client_mode": "navigate-existing"
+  },
   "background_color": "#f7f7f2",
   "theme_color": "#f7f7f2",
   "prefer_related_applications": false,

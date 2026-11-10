@@ -1,4 +1,4 @@
-const CACHE_NAME = "buddy-shell-v19";
+const CACHE_NAME = "buddy-shell-v22";
 const APP_SHELL = [
   "./",
   "./index.html",
@@ -22,6 +22,10 @@ self.addEventListener("install", (event) => {
     caches.open(CACHE_NAME)
       .then((cache) => cache.addAll(APP_SHELL.map((url) => new Request(url, { cache: "reload" }))))
       .then(() => self.skipWaiting())
+      .catch((error) => {
+        console.error("Não foi possível preparar a aplicação para utilização offline.", error);
+        throw error;
+      })
   );
 });
 
@@ -42,8 +46,13 @@ self.addEventListener("activate", (event) => {
 
 self.addEventListener("fetch", (event) => {
   const request = event.request;
+  const requestUrl = new URL(request.url);
 
-  if (request.method !== "GET" || new URL(request.url).origin !== self.location.origin) {
+  if (
+    request.method !== "GET"
+    || requestUrl.origin !== self.location.origin
+    || !requestUrl.href.startsWith(self.registration.scope)
+  ) {
     return;
   }
 
@@ -62,7 +71,7 @@ self.addEventListener("fetch", (event) => {
           const cachedPage = await caches.match(request, { ignoreSearch: true });
           const appShell = await caches.match("./index.html");
           const offlinePage = await caches.match("./pages/offline.html");
-          return cachedPage || appShell || offlinePage;
+          return cachedPage || appShell || offlinePage || Response.error();
         }
       })()
     );
