@@ -1,4 +1,4 @@
-import { setupInstallPrompt } from "./modules/ui.js";
+import { setupInstallPrompt, updateCurrentYear } from "./modules/ui.js";
 
 const ENTRIES_KEY = "buddy.entries.v1";
 const PROFILE_KEY = "buddy.profile.v1";
@@ -504,9 +504,16 @@ function renderProfile() {
 }
 
 function currentRoute() {
-  const value = window.location.hash.slice(1) || "welcome";
-  if (value === "home") return "dashboard";
-  return ["welcome", "role", "access", "signup", "signin", "dashboard", "checkin", "history", "notes", "exercises", "profile", "exercise/breathing", "exercise/grounding", "exercise/writing"].includes(value) ? value : "welcome";
+  const value = window.location.hash.slice(1).trim() || "welcome";
+  const aliasMap = {
+    home: "dashboard",
+    sobre: "welcome",
+    about: "welcome",
+    account: "role",
+    login: "role"
+  };
+  const normalized = aliasMap[value] || value;
+  return ["welcome", "role", "access", "signup", "signin", "dashboard", "checkin", "history", "notes", "exercises", "profile", "exercise/breathing", "exercise/grounding", "exercise/writing"].includes(normalized) ? normalized : "welcome";
 }
 
 function render() {
@@ -819,7 +826,7 @@ function handleClick(event) {
 }
 
 function initialize() {
-  document.querySelector("[data-current-year]").textContent = String(new Date().getFullYear());
+  updateCurrentYear();
   app.addEventListener("click", handleClick);
   app.addEventListener("submit", (event) => {
     event.preventDefault();
