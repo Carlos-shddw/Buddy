@@ -1,4 +1,4 @@
-const CACHE_NAME = "buddy-shell-v23";
+const CACHE_NAME = "buddy-shell-v26";
 const APP_SHELL = [
   "./",
   "./index.html",
